@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: metaphor
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: @ACM_CERTIFICATE_ARN@
+    # todo - need to update this line
+    external-dns.alpha.kubernetes.io/hostname: metaphor-v2-@K8S_NAMESPACE@.preprod.kubefirst.com
+  labels:
+    run: metaphor
+spec:
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 3000
+  selector:
+    run: metaphor
+  externalTrafficPolicy: Cluster
+  type: LoadBalancer

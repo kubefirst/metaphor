@@ -1,0 +1,146 @@
+before_script:
+  - source /scripts/ci-cd/init.sh
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_TLS_VERIFY: 1
+  DOCKER_CERT_PATH: "${DOCKER_TLS_CERTDIR}/client"
+  K8S_DIR: "kubernetes/${CI_PROJECT_NAME}"
+  AWS_REGION: "us-east-1"
+  K8S_CLUSTER_NAME: "k8s-preprod"
+  BUILDER_IMAGE: "kubefirst/kubefirst-builder:0.2"
+
+stages:
+  - publish-container
+  - deploy-development
+  - deploy-staging
+  - release
+  - minor-version-bump
+  - deploy-production
+
+publish_container:
+  services:
+    - docker:19.03.13-dind
+  variables:
+    DOCKER_DRIVER: overlay
+  image: "${BUILDER_IMAGE}"
+  stage: publish-container
+  only:
+    - master
+    - /hotfix/
+  script:
+    - export DOCKER_HOST=tcp://localhost:2376
+    - /scripts/docker/build.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}"
+    - /scripts/aws/ecr-login.sh "${AWS_REGION}" "${ECR_REGISTRY_BASE_URL}"
+    - /scripts/docker/publish.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}"
+
+deploy_development:
+  variables:
+    K8S_NAMESPACE: "development"
+    K8S_NODE_SELECTOR: preprod
+  image: "${BUILDER_IMAGE}"
+  stage: deploy-development
+  only:
+    - master
+    - /hotfix/
+  script:
+    - export PACKAGE_VERSION=$(node -pe "require('./package.json').version")
+    - export DOCKER_TAG="${CI_COMMIT_SHA}"
+    - /scripts/ci-cd/detokenize.sh "@K8S_NAMESPACE@" "${K8S_NAMESPACE}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@CI_PROJECT_NAME@" "${CI_PROJECT_NAME}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@DOCKER_TAG@" "${DOCKER_TAG}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@PACKAGE_VERSION@" "${PACKAGE_VERSION}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
+    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_REGION}" "${K8S_CLUSTER_NAME}"
+    - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
+  environment:
+    name: development
+    url: https://metaphor-v2-development.preprod.kubefirst.com
+
+deploy_staging:
+  variables:
+    K8S_NAMESPACE: "staging"
+    K8S_NODE_SELECTOR: preprod
+  image: "${BUILDER_IMAGE}"
+  stage: deploy-staging
+  only:
+    - master
+    - /hotfix/
+  script:
+    - export PACKAGE_VERSION=$(node -pe "require('./package.json').version")
+    - export DOCKER_TAG="${CI_COMMIT_SHA}"
+    - /scripts/ci-cd/detokenize.sh "@K8S_NAMESPACE@" "${K8S_NAMESPACE}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@CI_PROJECT_NAME@" "${CI_PROJECT_NAME}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@DOCKER_TAG@" "${DOCKER_TAG}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@PACKAGE_VERSION@" "${PACKAGE_VERSION}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
+    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_REGION}" "${K8S_CLUSTER_NAME}"
+    - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
+  environment:
+    name: staging
+    url: https://metaphor-v2-staging.preprod.kubefirst.com
+
+release:
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay
+    AWS_REGION: "us-east-2"
+  image: "${BUILDER_IMAGE}"
+  stage: release
+  only:
+    - master
+    - /hotfix/
+  script:
+    - git checkout "${CI_COMMIT_REF_NAME}"
+    - export DOCKER_HOST=tcp://localhost:2376
+    - export RELEASE_VERSION=$(node -pe "require('./package.json').version")
+    - git tag -a "v${RELEASE_VERSION}" -m "[ci skip]"
+    - git push --follow-tags origin HEAD:$CI_COMMIT_REF_NAME
+    - /scripts/aws/ecr-login.sh "${AWS_REGION}" "${ECR_REGISTRY_BASE_URL}"
+    - /scripts/ci-cd/docker-image-retag.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}" "${RELEASE_VERSION}"
+  when: manual
+
+minor_version_bump:
+  image: "${BUILDER_IMAGE}"
+  stage: minor-version-bump
+  only:
+    - master
+  script:
+    - git checkout "${CI_COMMIT_REF_NAME}"
+    - npm --no-git-tag-version version minor -m "[minor version bump] %s --version"
+    - export NEXT_RELEASE_VERSION=$(node -pe "require('./package.json').version")
+    - git add package.json package-lock.json
+    - git commit -m "[minor version bump] ${NEXT_RELEASE_VERSION}"
+    - git push
+  when: manual
+
+deploy_production:
+  variables:
+    K8S_NAMESPACE: "production"
+    K8S_NODE_SELECTOR: production
+  image: "${BUILDER_IMAGE}"
+  stage: deploy-production
+  only:
+    - master
+    - /hotfix/
+  script:
+    - export PACKAGE_VERSION=$(node -pe "require('./package.json').version")
+    - export DOCKER_TAG="${CI_COMMIT_SHA}"
+    - /scripts/ci-cd/detokenize.sh "@K8S_NAMESPACE@" "${K8S_NAMESPACE}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@CI_PROJECT_NAME@" "${CI_PROJECT_NAME}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@DOCKER_TAG@" "${DOCKER_TAG}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@PACKAGE_VERSION@" "${PACKAGE_VERSION}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
+    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_REGION}" "${K8S_CLUSTER_NAME}"
+    - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
+  when: manual
+  environment:
+    name: production
+    url: https://metaphor-v2-production.preprod.kubefirst.com

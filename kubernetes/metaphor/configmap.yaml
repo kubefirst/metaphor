@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metaphor-cm
+data:
+  CONFIG_ONE: your-first-config
+  CONFIG_TWO: your-second-config
+  PORT: "3000"
+  NODE_ENV: @K8S_NAMESPACE@
+  ENVIRONMENT: @K8S_NAMESPACE@

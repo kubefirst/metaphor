@@ -1,0 +1,35 @@
+doctype html
+html(lang='')
+  head
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title #{title}
+    meta(name='description', content='')
+    meta(name='theme-color' content='#4DA5F4')
+    link(rel='stylesheet', href='/css/main.css')
+    link(rel='preconnect', href='https://fonts.gstatic.com')
+    link(rel='stylesheet', href='https://fonts.googleapis.com/css2?family=Coda&display=swap', type='text/css')
+
+
+  body
+    h1 #{appName}
+    .col 
+      h2 app details
+      h4 app name: #{appName}
+      h4 package.json version: #{packageVersion}
+      h4 docker tag: #{dockerTag}
+    .col
+      h2 values from secrets 
+      h4 SECRET_ONE: #{secretOne}
+      h4 SECRET_TWO: #{secretTwo}
+    .col
+      h2 values from configmap.yaml
+      h4 CONFIG_ONE: #{configOne}
+      h4 CONFIG_TWO: #{configTwo}
+  
+
+    script(src='/js/lib/jquery-3.1.1.min.js')
+    script(src='/js/lib/bootstrap.min.js')
+    script(async defer src="https://buttons.github.io/buttons.js")
+    script(src='/js/main.js')

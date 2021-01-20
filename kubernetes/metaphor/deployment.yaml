@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metaphor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: metaphor
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: metaphor
+    spec:
+      serviceAccount: metaphor-sa
+      containers:
+      - image: @ECR_REGISTRY_BASE_URL@/@CI_PROJECT_NAME@:@DOCKER_TAG@
+        name: metaphor
+        env:
+        - name: PACKAGE_VERSION
+          value: @PACKAGE_VERSION@
+        - name: DOCKER_TAG
+          value: @DOCKER_TAG@
+        envFrom:
+        - secretRef:
+            name: metaphor-secrets
+        - configMapRef:
+            name: metaphor-cm
+        ports:
+          - containerPort: 3000
+            protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: "128Mi"
+          requests:
+            cpu: 40m
+            memory: "64Mi"
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          timeoutSeconds: 1
+        livenessProbe:
+          tcpSocket:
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          failureThreshold: 1
+          timeoutSeconds: 30
+      nodeSelector:
+        workload: @K8S_NODE_SELECTOR@
+      restartPolicy: Always
