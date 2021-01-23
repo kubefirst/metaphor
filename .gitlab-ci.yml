@@ -100,7 +100,7 @@ release:
     - git tag -a "v${RELEASE_VERSION}" -m "[ci skip]"
     - git push --follow-tags origin HEAD:$CI_COMMIT_REF_NAME
     - /scripts/aws/ecr-login.sh "${AWS_DEFAULT_REGION}" "${ECR_REGISTRY_BASE_URL}"
-    - /scripts/ci-cd/docker-image-retag.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}" "${RELEASE_VERSION}"
+    - /scripts/docker/docker-image-retag.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}" "${RELEASE_VERSION}"
   when: manual
 
 minor_version_bump:
