@@ -1,5 +1,6 @@
 before_script:
   - source /scripts/ci-cd/init.sh
+   - /scripts/gitlab/add-deploy-key.sh "${GITLAB_ROOT_USER_PERSONAL_ACCESS_TOKEN}" "${CI_SERVER_HOST}" "${GITLAB_KUBEFIRST_GROUP_ID}"
 
 variables:
   DOCKER_TLS_CERTDIR: "/certs"
