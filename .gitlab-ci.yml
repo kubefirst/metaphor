@@ -6,7 +6,6 @@ variables:
   DOCKER_TLS_VERIFY: 1
   DOCKER_CERT_PATH: "${DOCKER_TLS_CERTDIR}/client"
   K8S_DIR: "kubernetes/${CI_PROJECT_NAME}"
-  AWS_REGION: "us-east-1"
   K8S_CLUSTER_NAME: "k8s-preprod"
   BUILDER_IMAGE: "kubefirst/kubefirst-builder:0.2"
 
@@ -31,7 +30,7 @@ publish_container:
   script:
     - export DOCKER_HOST=tcp://localhost:2376
     - /scripts/docker/build.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}"
-    - /scripts/aws/ecr-login.sh "${AWS_REGION}" "${ECR_REGISTRY_BASE_URL}"
+    - /scripts/aws/ecr-login.sh "${AWS_DEFAULT_REGION}" "${ECR_REGISTRY_BASE_URL}"
     - /scripts/docker/publish.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}"
 
 deploy_development:
@@ -53,7 +52,7 @@ deploy_development:
     - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
-    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_REGION}" "${K8S_CLUSTER_NAME}"
+    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_DEFAULT_REGION}" "${K8S_CLUSTER_NAME}"
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   environment:
     name: development
@@ -78,7 +77,7 @@ deploy_staging:
     - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
-    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_REGION}" "${K8S_CLUSTER_NAME}"
+    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_DEFAULT_REGION}" "${K8S_CLUSTER_NAME}"
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   environment:
     name: staging
@@ -89,7 +88,6 @@ release:
     - docker:dind
   variables:
     DOCKER_DRIVER: overlay
-    AWS_REGION: "us-east-2"
   image: "${BUILDER_IMAGE}"
   stage: release
   only:
@@ -101,8 +99,8 @@ release:
     - export RELEASE_VERSION=$(node -pe "require('./package.json').version")
     - git tag -a "v${RELEASE_VERSION}" -m "[ci skip]"
     - git push --follow-tags origin HEAD:$CI_COMMIT_REF_NAME
-    - /scripts/aws/ecr-login.sh "${AWS_REGION}" "${ECR_REGISTRY_BASE_URL}"
-    - /scripts/ci-cd/docker-image-retag.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}" "${RELEASE_VERSION}"
+    - /scripts/aws/ecr-login.sh "${AWS_DEFAULT_REGION}" "${ECR_REGISTRY_BASE_URL}"
+    - /scripts/docker/docker-image-retag.sh "${ECR_REGISTRY_BASE_URL}" "${CI_PROJECT_NAME}" "${CI_COMMIT_SHA}" "${RELEASE_VERSION}"
   when: manual
 
 minor_version_bump:
@@ -138,7 +136,7 @@ deploy_production:
     - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
-    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_REGION}" "${K8S_CLUSTER_NAME}"
+    - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_DEFAULT_REGION}" "${K8S_CLUSTER_NAME}"
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   when: manual
   environment:
