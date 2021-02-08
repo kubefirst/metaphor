@@ -58,7 +58,6 @@ deploy_development:
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   environment:
     name: development
-    url: https://metaphor-v2-development.preprod.kubefirst.com
 
 deploy_staging:
   variables:
@@ -84,7 +83,6 @@ deploy_staging:
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   environment:
     name: staging
-    url: https://metaphor-v2-staging.preprod.kubefirst.com
 
 release:
   services:
@@ -145,4 +143,3 @@ deploy_production:
   when: manual
   environment:
     name: production
-    url: https://metaphor-v2-production.preprod.kubefirst.com
