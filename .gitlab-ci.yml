@@ -53,6 +53,7 @@ deploy_development:
     - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@DOMAIN@" "${HOSTED_ZONE_NAME}" "${K8S_DIR}"
     - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_DEFAULT_REGION}" "${K8S_CLUSTER_NAME}"
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   environment:
@@ -78,6 +79,7 @@ deploy_staging:
     - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@DOMAIN@" "${HOSTED_ZONE_NAME}" "${K8S_DIR}"
     - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_DEFAULT_REGION}" "${K8S_CLUSTER_NAME}"
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   environment:
@@ -137,6 +139,7 @@ deploy_production:
     - /scripts/ci-cd/detokenize.sh "@ECR_REGISTRY_BASE_URL@" "${ECR_REGISTRY_BASE_URL}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@ACM_CERTIFICATE_ARN@" "${ACM_CERTIFICATE_ARN}" "${K8S_DIR}"
     - /scripts/ci-cd/detokenize.sh "@K8S_NODE_SELECTOR@" "${K8S_NODE_SELECTOR}" "${K8S_DIR}"
+    - /scripts/ci-cd/detokenize.sh "@DOMAIN@" "${HOSTED_ZONE_NAME}" "${K8S_DIR}"
     - /scripts/kubernetes/deploy.sh "${K8S_NAMESPACE}" "${K8S_DIR}" "${AWS_DEFAULT_REGION}" "${K8S_CLUSTER_NAME}"
     - kubectl -n "${K8S_NAMESPACE}" rollout status deployment/${CI_PROJECT_NAME}
   when: manual
