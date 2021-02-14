@@ -46,3 +46,28 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    
+    - name: detokenize
+      uses: cschleiden/replace-tokens@v1
+      with:
+        tokenPrefix: '@'
+        tokenSuffix: '@'
+        files: '["kubernetes/**/*.js"]'
+      env:
+        DOMAIN: preprod.kubefirst.com
+        NAMESPACE: development-github
+        K8S_CLUSTER_NAME: k8s-preperod
+        CI_PROJECT_NAME: metaphor
+        DOCKER_TAG: ${{ github.sha }}
+        PACKAGE_VERSION: github-test
+        ECR_REGISTRY: 555935582951.dkr.ecr.us-east-2.amazonaws.com
+        VAULT_MOUNT_PATH: preprod
+        K8S_NODE_SELECTOR: preprod
+
+    - name: deploy development-github
+      uses: Azure/k8s-deploy@v1.3
+      with:
+        namespace: 'development-github'
+        manifests: |
+            kubernetes/metaphor
+        kubectl-version: 'latest'
