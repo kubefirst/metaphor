@@ -75,5 +75,9 @@ jobs:
       with:
         namespace: 'development-github'
         manifests: |
-            kubernetes/metaphor
+            kubernetes/metaphor/configmap.yaml
+            kubernetes/metaphor/deployment.yaml
+            kubernetes/metaphor/secret.yaml
+            kubernetes/metaphor/service-account.yaml
+            kubernetes/metaphor/service.yaml
         kubectl-version: 'latest'
