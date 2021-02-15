@@ -32,6 +32,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
         aws-region: us-east-2
 
     - name: Login to Amazon ECR
@@ -52,7 +53,7 @@ jobs:
       with:
         tokenPrefix: '@'
         tokenSuffix: '@'
-        files: '["kubernetes/**/*.js"]'
+        files: '["kubernetes/**/*.yaml"]'
       env:
         DOMAIN: preprod.kubefirst.com
         NAMESPACE: development-github
@@ -63,14 +64,6 @@ jobs:
         ECR_REGISTRY: 555935582951.dkr.ecr.us-east-2.amazonaws.com
         VAULT_MOUNT_PATH: preprod
         K8S_NODE_SELECTOR: preprod
-
-    - name: Configure AWS credentials from preprod account
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-        aws-region: us-east-2
     
     - uses: azure/k8s-set-context@v1
       with:
