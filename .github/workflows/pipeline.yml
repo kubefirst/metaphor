@@ -65,6 +65,7 @@ jobs:
         ECR_REGISTRY: 555935582951.dkr.ecr.us-east-2.amazonaws.com
         VAULT_MOUNT_PATH: preprod
         K8S_NODE_SELECTOR: preprod
+        K8S_NAMESPACE: development
     
     - uses: azure/k8s-set-context@v1
       with:
