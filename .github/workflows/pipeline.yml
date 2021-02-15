@@ -1,0 +1,86 @@
+
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: metaphor ci
+
+on:
+  push:
+    branches:
+    - github-actions 
+  pull_request:
+    branches:
+    - github-actions 
+env:
+  K8S_DIR: kubernetes/metaphor
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials from preprod account
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        aws-region: us-east-2
+        role-duration-seconds: 1200
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: metaphor-github
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    
+    - name: detokenize
+      uses: cschleiden/replace-tokens@v1
+      with:
+        tokenPrefix: '@'
+        tokenSuffix: '@'
+        files: '["kubernetes/**/*.yaml"]'
+      env:
+        DOMAIN: preprod.kubefirst.com
+        NAMESPACE: development-github
+        K8S_CLUSTER_NAME: k8s-preperod
+        CI_PROJECT_NAME: metaphor
+        DOCKER_TAG: ${{ github.sha }}
+        PACKAGE_VERSION: github-test
+        ECR_REGISTRY: 555935582951.dkr.ecr.us-east-2.amazonaws.com
+        VAULT_MOUNT_PATH: preprod
+        K8S_NODE_SELECTOR: preprod
+        K8S_NAMESPACE: development
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBECONFIG }}
+      id: setcontext
+
+    - name: deploy development-github
+      uses: Azure/k8s-deploy@v1.3
+      with:
+        namespace: 'development-github'
+        manifests: |
+            kubernetes/metaphor/configmap.yaml
+            kubernetes/metaphor/deployment.yaml
+            kubernetes/metaphor/secret.yaml
+            kubernetes/metaphor/service-account.yaml
+            kubernetes/metaphor/service.yaml
+        kubectl-version: 'latest'

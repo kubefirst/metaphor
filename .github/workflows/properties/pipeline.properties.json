@@ -1,0 +1,6 @@
+{
+  "name": "Node.js pipeline",
+  "description": "build, publish, deploy application image.",
+  "iconName": "nodejs",
+  "categories": ["JavaScript"]
+}
