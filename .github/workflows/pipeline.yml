@@ -67,7 +67,7 @@ jobs:
     - uses: azure/k8s-set-context@v1
       with:
         method: kubeconfig
-        kubeconfig: ${{ secrets.kubeconfig }}
+        kubeconfig: ${{ secrets.KUBECONFIG }}
       id: setcontext
 
     - name: deploy development-github
